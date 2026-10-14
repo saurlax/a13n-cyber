@@ -1,5 +1,5 @@
 param(
-    [string]$Image = 'tsec-step-agent:dev',
+    [string]$Image = 'a13n-cyber:dev',
     [string]$PythonBaseImage = 'python:3.12-slim-bookworm',
     [switch]$Export
 )
@@ -13,8 +13,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Offline image self-check failed' }
     if ($Export) {
         New-Item -ItemType Directory -Force dist | Out-Null
-        docker image save -o dist/tsec-step-agent.tar $Image
+        docker image save -o dist/a13n-cyber.tar $Image
         if ($LASTEXITCODE -ne 0) { throw 'Docker image export failed' }
-        Get-FileHash -Algorithm SHA256 -LiteralPath dist/tsec-step-agent.tar
+        Get-FileHash -Algorithm SHA256 -LiteralPath dist/a13n-cyber.tar
     }
 } finally { Pop-Location }

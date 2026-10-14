@@ -1,6 +1,8 @@
-# TSecBench / StepFun Agent 工作区
+# a13n Cyber · 自主攻防智能体
 
-2026-10-14 建立。模型选用 StepFun **`step-5-preview`**（官方 ID，不是 `stepfun-5-preview`）。
+2026-10-14 建立。面向 TSecBench 参赛，计划采用 a13n Harness；当前骨架尚未集成 Harness。模型选用 StepFun **`step-5-preview`**。
+
+项目目录：`D:/Projects/a13n-cyber`。仓库：[saurlax/a13n-cyber](https://github.com/saurlax/a13n-cyber)。
 
 当前交付是 Git 仓库与容器准备骨架：离线配置检查、一次模型连通性检查、镜像构建脚本和参考仓库研究。**尚未实现平台调度、解题工具与 Agent 循环，不能作为正式参赛镜像提交。**
 
@@ -30,7 +32,7 @@ python -m unittest discover -s tests -v
 
 ```powershell
 ./scripts/build-image.ps1
-docker run --rm --network none tsec-step-agent:dev doctor
+docker run --rm --network none a13n-cyber:dev doctor
 ```
 
 若 Docker Hub 无法连接，可通过 `-PythonBaseImage public.ecr.aws/docker/library/python:3.12-slim-bookworm` 使用公开镜像副本；此参数不修改 Docker 全局镜像源。
@@ -42,7 +44,7 @@ docker run --rm --network none tsec-step-agent:dev doctor
 复制 `.env.example` 为 `.env`，在本地编辑密钥。Python CLI 不会自动加载 `.env`；本地直接运行需设置环境变量，Docker 可加载文件：
 
 ```powershell
-docker run --rm --env-file .env tsec-step-agent:dev llm-smoke
+docker run --rm --env-file .env a13n-cyber:dev llm-smoke
 ```
 
 它只发送一次「Reply with OK only」，默认最大输出 512 tokens、60 秒超时，不自动重试。默认地址是官方 Step Plan 的 Chat Completions 入口 `https://api.stepfun.com/step_plan/v1`；普通按量 API 是 `https://api.stepfun.com/v1`。未填 Key 会直接失败。实际账户模型权限和托管网关支持还需联调。
@@ -55,7 +57,7 @@ docker run --rm --env-file .env tsec-step-agent:dev llm-smoke
 ./scripts/build-image.ps1 -Export
 ```
 
-生成 `dist/tsec-step-agent.tar` 和 SHA256。这仍是准备镜像，不是解题镜像；最终压缩格式、启动参数、日志格式等需按当届托管要求核实。
+生成 `dist/a13n-cyber.tar` 和 SHA256。这仍是准备镜像，不是解题镜像；最终压缩格式、启动参数、日志格式等需按当届托管要求核实。
 
 ## 下一步
 

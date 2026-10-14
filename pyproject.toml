@@ -3,13 +3,14 @@ requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tsec-step-agent"
+name = "a13n-cyber"
 version = "0.1.0"
-description = "StepFun-backed TSecBench agent workspace and container preparation"
+description = "a13n Cyber: StepFun-backed TSecBench security agent workspace"
 requires-python = ">=3.12"
 dependencies = []
 
 [project.scripts]
+a13n-cyber = "tsec_agent.cli:main"
 tsec-agent = "tsec_agent.cli:main"
 
 [tool.setuptools.packages.find]
