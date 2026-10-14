@@ -1,6 +1,6 @@
 param(
     [string]$Image = 'a13n-cyber:dev',
-    [string]$PythonBaseImage = 'python:3.12-slim-bookworm',
+    [string]$PythonBaseImage = 'python:3.13-slim-bookworm',
     [switch]$Export
 )
 $ErrorActionPreference = 'Stop'

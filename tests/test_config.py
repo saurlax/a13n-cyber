@@ -8,14 +8,25 @@ from tsec_agent.config import Config
 
 class ConfigTests(unittest.TestCase):
     def test_secrets_not_in_repr_or_summary(self):
-        with patch.dict(os.environ, {"STEPFUN_API_KEY": "secret-model-key", "BENCHMARK_TOKEN": "secret-bench-key"}, clear=True):
+        with patch.dict(
+            os.environ,
+            {
+                "STEPFUN_API_KEY": "secret-model-key",
+                "BENCHMARK_TOKEN": "secret-bench-key",
+            },
+            clear=True,
+        ):
             config = Config.from_env()
         output = repr(config) + json.dumps(config.public_summary())
         self.assertNotIn("secret-model-key", output)
         self.assertNotIn("secret-bench-key", output)
 
     def test_rejects_credentials_in_endpoint(self):
-        with patch.dict(os.environ, {"LLM_BASE_URL": "https://user:secret@example.com/v1"}, clear=True):
+        with patch.dict(
+            os.environ,
+            {"LLM_BASE_URL": "https://user:secret@example.com/v1"},
+            clear=True,
+        ):
             with self.assertRaises(ValueError):
                 Config.from_env()
 

@@ -6,8 +6,13 @@ build-backend = "setuptools.build_meta"
 name = "a13n-cyber"
 version = "0.1.0"
 description = "a13n Cyber: StepFun-backed TSecBench security agent workspace"
-requires-python = ">=3.12"
-dependencies = []
+requires-python = ">=3.13"
+dependencies = [
+    "a13n-harness==0.11.1",
+    "openai>=3.5,<4",
+    "pydantic-ai>=2.55,<3",
+    "tsec-benchmark==0.1.2",
+]
 
 [project.scripts]
 a13n-cyber = "tsec_agent.cli:main"
@@ -15,3 +20,15 @@ tsec-agent = "tsec_agent.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[dependency-groups]
+dev = [
+    "fastmcp-slim[server]>=4.1,<5",
+    "ruff>=0.17.0",
+]

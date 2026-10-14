@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
 import os
+from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
 
@@ -17,7 +17,9 @@ class Config:
     @classmethod
     def from_env(cls):
         result = cls(
-            base_url=os.getenv("LLM_BASE_URL", "https://api.stepfun.com/step_plan/v1").rstrip("/"),
+            base_url=os.getenv(
+                "LLM_BASE_URL", "https://api.stepfun.com/step_plan/v1"
+            ).rstrip("/"),
             model=os.getenv("LLM_MODEL", "step-5-preview"),
             api_key=os.getenv("STEPFUN_API_KEY", "") or os.getenv("LLM_API_KEY", ""),
             benchmark_url=os.getenv("BENCHMARK_BASE_URL", ""),
@@ -34,7 +36,9 @@ class Config:
         if parsed.scheme not in {"https", "http"} or not parsed.hostname:
             raise ValueError("LLM_BASE_URL must be an absolute HTTP(S) URL")
         if parsed.username or parsed.password or parsed.query or parsed.fragment:
-            raise ValueError("LLM_BASE_URL must not contain credentials, query, or fragment")
+            raise ValueError(
+                "LLM_BASE_URL must not contain credentials, query, or fragment"
+            )
         if not self.model.strip():
             raise ValueError("LLM_MODEL must not be empty")
         if self.reasoning_effort not in {"low", "medium", "high"}:
@@ -55,3 +59,21 @@ class Config:
             "max_output_tokens": self.max_output_tokens,
             "request_timeout_seconds": self.timeout,
         }
+
+    def require_model(self):
+        if not self.api_key.strip():
+            raise ValueError("Set STEPFUN_API_KEY or LLM_API_KEY")
+
+    def require_benchmark(self):
+        parsed = urlsplit(self.benchmark_url)
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError("BENCHMARK_BASE_URL must be a credential-free HTTP(S) URL")
+        if not self.benchmark_token.strip():
+            raise ValueError("Set BENCHMARK_TOKEN")

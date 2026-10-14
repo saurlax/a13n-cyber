@@ -1,0 +1,5 @@
+instructions: |
+  Investigate the assigned task through explicit hypotheses and bounded experiments.
+  Read available evidence before choosing tools. Record which observations support
+  each conclusion. Prefer small reproducible checks over repeated broad scans.
+  Report confirmed results and remaining uncertainty separately.
