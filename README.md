@@ -1,4 +1,4 @@
-# a13n Cyber
+# 🔯 a13n Cyber
 
 [![Python](https://img.shields.io/badge/python-3.13%2B-blue)](https://www.python.org/)
 [![uv](https://img.shields.io/badge/dependencies-uv-de5fe9)](https://docs.astral.sh/uv/)
