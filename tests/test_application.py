@@ -22,13 +22,13 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
             body = json.loads(request.content)
             requests.append(body)
             self.assertEqual(request.url.path, "/v1/chat/completions")
-            self.assertEqual(body["model"], "step-5-preview")
+            self.assertEqual(body["model"], "test-chat-model")
             self.assertTrue(body["stream"])
             chunk = {
                 "id": "offline",
                 "object": "chat.completion.chunk",
                 "created": 0,
-                "model": "step-5-preview",
+                "model": "test-chat-model",
                 "choices": [
                     {
                         "index": 0,
@@ -62,7 +62,7 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
             )
             config = Config(
                 base_url="https://model.test/v1",
-                model="step-5-preview",
+                model="test-chat-model",
                 api_key="test-model-key",
             )
             with patch("tsec_agent.application.AsyncOpenAI", client_factory):
@@ -83,7 +83,14 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
 
         with patch("tsec_agent.application.execute", execute):
             with self.assertRaises(TimeoutError):
-                await run_application(SimpleNamespace(timeout=0.01), Config.from_env())
+                await run_application(
+                    SimpleNamespace(timeout=0.01),
+                    Config(
+                        base_url="https://model.test/v1",
+                        model="test-chat-model",
+                        api_key="test-key",
+                    ),
+                )
         self.assertEqual(cleaned, [True])
 
     async def test_sigterm_cancels_then_restores_handler(self):
@@ -100,7 +107,14 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
 
         with patch("tsec_agent.application.execute", execute):
             with self.assertRaises(Interrupted) as exc:
-                await run_application(SimpleNamespace(timeout=10), Config.from_env())
+                await run_application(
+                    SimpleNamespace(timeout=10),
+                    Config(
+                        base_url="https://model.test/v1",
+                        model="test-chat-model",
+                        api_key="test-key",
+                    ),
+                )
         self.assertEqual(exc.exception.exit_code, 143)
         self.assertEqual(cleaned, [True])
         self.assertEqual(signal.getsignal(signal.SIGTERM), previous)

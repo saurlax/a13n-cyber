@@ -1,6 +1,6 @@
 # Architecture
 
-a13n Cyber embeds a13n Harness in one Python process. The same agent composition serves user tasks and TSecBench challenges. The application does not implement a second model/tool loop.
+a13n Cyber is a general-purpose autonomous security agent built on a13n Harness. The core composes model access, workspace tools, skills, and MCP independently of model vendors and evaluation platforms. Optional integrations, including TSecBench, reuse that core. The application does not implement a second model/tool loop.
 
 ```mermaid
 flowchart TB

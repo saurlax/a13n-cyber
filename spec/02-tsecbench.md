@@ -26,4 +26,4 @@ The model does not receive lifecycle controls or arbitrary challenge selection. 
 
 Local stop reasons distinguish all-completed, selected-pass-complete, challenge-limit, platform-ended, budget exhaustion, and deadline. An empty challenge set is all-completed. Scores and completion are taken from platform responses, not inferred from model text. A platform `invalid_state` response is not universally treated as task-ended: context distinguishes start capacity, hint restrictions, and task completion. Unclassified platform errors stop safely.
 
-After all selected work, the runner releases SDK resources and exits. It does not assume that all flags submitted or container exit immediately finalizes the platform task. The container default command is `tsecbench`; callers can override it with another CLI command.
+After all selected work, the runner releases SDK resources and exits. It does not assume that all flags submitted or container exit immediately finalizes the platform task. Platform deployments explicitly select the `tsecbench` command; the general-purpose image does not select an evaluation platform by default.

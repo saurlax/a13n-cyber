@@ -8,7 +8,7 @@ import platform
 import sys
 
 from . import __version__
-from .config import Config
+from .config import Config, ConfigurationError
 from .llm import smoke
 
 
@@ -92,5 +92,8 @@ def main(argv=None):
         reason = "deadline" if isinstance(exc, TimeoutError) else category
         if category == "BudgetExhausted":
             reason = "budget_exhausted"
-        print(json.dumps({"status": "failed", "reason": reason}), file=sys.stderr)
+        failure = {"status": "failed", "reason": reason}
+        if isinstance(exc, ConfigurationError):
+            failure["message"] = str(exc)
+        print(json.dumps(failure), file=sys.stderr)
         return exit_code

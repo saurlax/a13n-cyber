@@ -10,4 +10,4 @@ COPY agents/ ./agents/
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --locked --no-dev --no-editable
 ENV PATH="/app/.venv/bin:$PATH"
 ENTRYPOINT ["a13n-cyber"]
-CMD ["tsecbench"]
+CMD ["--help"]

@@ -3,9 +3,9 @@
 [![Python](https://img.shields.io/badge/python-3.13%2B-blue)](https://www.python.org/)
 [![uv](https://img.shields.io/badge/dependencies-uv-de5fe9)](https://docs.astral.sh/uv/)
 
-**An autonomous security agent built on a13n Harness.**
+**A general-purpose autonomous security agent built on a13n Harness.**
 
-a13n Cyber runs general security tasks and TSecBench evaluations through the same embedded agent. It combines workspace tools, procedural skills, MCP capabilities, and an OpenAI-compatible Chat Completions model, with StepFun as the default provider.
+a13n Cyber investigates and executes security tasks using workspace tools, procedural skills, MCP capabilities, and configurable models. Build task-specific agents on a shared Harness runtime and extend their behavior through native capabilities.
 
 ```mermaid
 flowchart LR
@@ -34,14 +34,13 @@ You need **Python 3.13 or later** and **[uv](https://docs.astral.sh/uv/getting-s
 git clone https://github.com/saurlax/a13n-cyber.git
 cd a13n-cyber
 uv sync --locked
-uv run --locked a13n-cyber doctor
 ```
 
-`doctor` validates configuration offline and prints a JSON summary with credential-presence booleans.
+Configure the three required model environment variables before running commands. `doctor` validates them offline and reports credential presence without printing the key; missing configuration fails before any network request.
 
 ## Run an agent
 
-Copy `.env.example` to `.env` and set `STEPFUN_API_KEY`. Then run a task:
+Copy `.env.example` to `.env` and explicitly set `LLM_BASE_URL`, `LLM_MODEL`, and `LLM_API_KEY` for your Chat Completions provider. No provider, model, or credential defaults are supplied. Then run a task:
 
 ```bash
 uv run --locked --env-file .env a13n-cyber run "Inspect the files and summarize the application architecture" --workspace ./work
@@ -96,21 +95,20 @@ See the [Harness MCP guide](https://a13n.dev/docs/a13n-harness/mcp/) for native 
 
 ## Configure models and credentials
 
-The default model is `step-5-preview` at the Step Plan Chat Completions endpoint. Settings come from the process environment; uv and Docker can load an untracked `.env` file.
+Supply `LLM_BASE_URL`, `LLM_MODEL`, and `LLM_API_KEY` explicitly in the process environment. All three are required; unset, empty, or whitespace-only values are rejected. There are no vendor-specific credential aliases. uv and Docker can load an untracked `.env` file.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `LLM_BASE_URL` | `https://api.stepfun.com/step_plan/v1` | Chat Completions API base URL |
-| `LLM_MODEL` | `step-5-preview` | Model identifier |
-| `STEPFUN_API_KEY` | Unset | Model credential; takes precedence over `LLM_API_KEY` |
-| `LLM_API_KEY` | Unset | Alternative model credential |
-| `LLM_REASONING_EFFORT` | `high` | `low`, `medium`, or `high` |
+| `LLM_BASE_URL` | Required | Chat Completions API base URL |
+| `LLM_MODEL` | Required | Provider model identifier |
+| `LLM_API_KEY` | Required | Model API credential |
+| `LLM_REASONING_EFFORT` | Unset | Optional `low`, `medium`, or `high`, when supported by the provider |
 | `LLM_REQUEST_TIMEOUT` | `60` | Provider and platform request timeout in seconds |
 | `LLM_MAX_OUTPUT_TOKENS` | `512` | Output limit for the connectivity check only |
 | `BENCHMARK_BASE_URL` | Unset | Required platform endpoint for TSecBench mode |
 | `BENCHMARK_TOKEN` | Unset | Required evaluation task credential |
 
-For a standard pay-as-you-go StepFun account, use `https://api.stepfun.com/v1`. Hosted TSecBench supplies benchmark credentials automatically; configure the permitted model gateway and model credential on its submission page. Runtime dependencies must be installed in the image before evaluation.
+The core uses your configured Chat Completions endpoint. Enable reasoning effort only when supported by that endpoint. For hosted TSecBench evaluation, supply the permitted gateway, model identifier, and API key on its submission page; the platform supplies benchmark credentials separately.
 
 To make one bounded connectivity request:
 
@@ -118,25 +116,31 @@ To make one bounded connectivity request:
 uv run --locked --env-file .env a13n-cyber llm-smoke
 ```
 
-The check consumes model quota. It does not retry automatically or print model content. Unit tests and `doctor` do not require credentials.
+The check consumes model quota. It does not retry automatically or print model content. Unit tests use explicit test configuration. `doctor` requires the three model variables but never contacts the provider.
 
 ## Build a container
 
-Docker builds install production dependencies with `uv sync --locked --no-dev --no-editable`. The image starts TSecBench mode by default.
+Docker builds install production dependencies with `uv sync --locked --no-dev --no-editable`. The image contains no model configuration and displays CLI help by default. Select a task or integration command explicitly.
 
 ```bash
 docker build --platform linux/amd64 -t a13n-cyber:dev .
-docker run --rm --network none a13n-cyber:dev doctor
-docker run --rm --env-file .env a13n-cyber:dev
+docker run --rm --network none --env-file .env a13n-cyber:dev doctor
+docker run --rm a13n-cyber:dev --help
 ```
 
-Override the default command for a general task:
+Run a general task with explicit model configuration:
 
 ```bash
 docker run --rm --env-file .env a13n-cyber:dev run "Inspect the workspace" --workspace /app/work
 ```
 
-On Windows, the build script also runs the offline diagnostic:
+For the optional benchmark integration, select its command explicitly:
+
+```bash
+docker run --rm --env-file .env a13n-cyber:dev tsecbench
+```
+
+On Windows, the build script also runs the offline diagnostic with explicit test-only configuration:
 
 ```powershell
 ./scripts/build-image.ps1
@@ -150,7 +154,7 @@ On Windows, the build script also runs the offline diagnostic:
 | Task | Command |
 | --- | --- |
 | Install the locked environment | `uv sync --locked` |
-| Run offline diagnostics | `uv run --locked a13n-cyber doctor` |
+| Run offline diagnostics | `uv run --locked --env-file .env a13n-cyber doctor` |
 | Run tests | `uv run --locked python -m unittest discover -s tests -v` |
 | Lint Python | `uv run --locked ruff check .` |
 | Check formatting | `uv run --locked ruff format --check .` |

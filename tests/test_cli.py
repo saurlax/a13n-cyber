@@ -28,9 +28,32 @@ class CliTests(unittest.TestCase):
     def test_doctor_is_offline_and_redacts_secrets(self):
         output = io.StringIO()
         with (
-            patch.dict(os.environ, {"LLM_API_KEY": "test-secret"}, clear=True),
+            patch.dict(
+                os.environ,
+                {
+                    "LLM_BASE_URL": "https://model.test/v1",
+                    "LLM_MODEL": "test-chat-model",
+                    "LLM_API_KEY": "test-secret",
+                },
+                clear=True,
+            ),
             redirect_stdout(output),
         ):
             self.assertEqual(main(["doctor"]), 0)
         self.assertEqual(json.loads(output.getvalue())["network_requests"], 0)
         self.assertNotIn("test-secret", output.getvalue())
+
+    def test_missing_model_configuration_fails_before_execution(self):
+        for command in (["doctor"], ["llm-smoke"], ["run", "task"], ["tsecbench"]):
+            with self.subTest(command=command):
+                errors = io.StringIO()
+                with (
+                    patch.dict(os.environ, {}, clear=True),
+                    redirect_stderr(errors),
+                    patch("tsec_agent.cli.smoke") as smoke,
+                ):
+                    self.assertEqual(main(command), 1)
+                smoke.assert_not_called()
+                self.assertIn("LLM_BASE_URL", errors.getvalue())
+                self.assertIn("LLM_MODEL", errors.getvalue())
+                self.assertIn("LLM_API_KEY", errors.getvalue())

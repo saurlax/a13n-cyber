@@ -2,7 +2,7 @@
 
 ## Commands
 
-- `a13n-cyber doctor` validates configuration offline and prints runtime metadata and credential-presence booleans.
+- `a13n-cyber doctor` validates explicitly supplied configuration offline and prints runtime metadata and credential-presence booleans. Missing required configuration fails with exit code 1 without network access.
 - `a13n-cyber llm-smoke` sends one bounded connectivity request.
 - `a13n-cyber run PROMPT` executes a nonempty user task through Harness.
 - `a13n-cyber tsecbench` runs the platform lifecycle defined in [TSecBench](02-tsecbench.md).
@@ -14,7 +14,9 @@ Exit code 0 means normal local completion, including an exhausted selected chall
 
 ## Composition
 
-The model uses explicit `OpenAIChatModel` and `OpenAIProvider`, with `LLM_MODEL`, `LLM_BASE_URL`, and `STEPFUN_API_KEY` or `LLM_API_KEY`. The API key and endpoint are validated before model execution. Request timeout and reasoning effort follow existing environment settings. Connectivity output limits remain separate from agent output settings.
+The model uses explicit `OpenAIChatModel` and `OpenAIProvider`. `LLM_BASE_URL`, `LLM_MODEL`, and `LLM_API_KEY` are all required process environment variables. Unset, empty, or whitespace-only values fail before model-client construction or platform requests. There are no provider defaults, model defaults, or vendor-specific credential aliases. Invalid URLs and missing-variable errors never echo supplied values. Help and version commands do not require model configuration.
+
+Request timeout follows `LLM_REQUEST_TIMEOUT`. Reasoning effort is omitted unless `LLM_REASONING_EFFORT` is explicitly supplied; the application does not automatically request a vendor-specific reasoning mode. Connectivity output limits remain separate from agent output settings. Containers include no model connection configuration and default to CLI help; task and integration commands are explicitly selected at invocation.
 
 An optional SDK-native AgentSpec file supplies instructions and capabilities, including supported declarative MCP. It is not Harness UI configuration. Application-owned model, deadline, usage, and base instruction policy take precedence. The spec cannot select an alternative model. Unknown or invalid spec fields fail preparation.
 

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "a13n-cyber"
 version = "0.1.0"
-description = "a13n Cyber: StepFun-backed TSecBench security agent workspace"
+description = "General-purpose autonomous security agent built on a13n Harness"
 requires-python = ">=3.13"
 dependencies = [
     "a13n-harness==0.11.1",

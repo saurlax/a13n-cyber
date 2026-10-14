@@ -1,6 +1,6 @@
 # Repository Guide
 
-a13n Cyber is a Python application for autonomous security-agent development. a13n Harness is the selected embedded execution engine; the application owns platform integration, scheduling, credentials, persistence, and recovery.
+a13n Cyber is a general-purpose autonomous security agent built on a13n Harness. Model providers and evaluation platforms are configurable dependencies or optional integrations, not the product's identity. The application owns integration lifecycles, scheduling, credentials, persistence, and recovery.
 
 ## Sources of Truth
 
@@ -24,6 +24,7 @@ Before every implementation change, assess whether it introduces or changes a pu
 Follow `spec/README.md` for specification ownership and management. Specifications describe accepted design in present-tense, testable language; they do not hold proposals, progress logs, or implementation checklists. Routine work does not require creating a GitHub Issue or PR, and this policy does not authorize external writes.
 
 - Reuse Harness execution, tools, state, and capability interfaces rather than implementing a second model/tool loop.
+- Require explicit `LLM_BASE_URL`, `LLM_MODEL`, and `LLM_API_KEY`. Do not introduce model/provider defaults or vendor-specific credential fallbacks. Keep repository and package descriptions focused on the general-purpose agent.
 - Keep platform adapters, agent composition, model configuration, and outer scheduling separate. Platform lifecycle and success verification belong to application code.
 - Keep stable agent definitions separate from current Run bindings and portable continuation state. Do not serialize credentials, live clients, or environment handles into state or metadata.
 - Treat skills as procedural content, MCP as a tool integration, and CLI binaries as execution-environment dependencies. A skill does not install tools or grant permissions.
@@ -49,11 +50,11 @@ Run checks appropriate to the changed behavior:
 
 ```bash
 uv sync --locked
-uv run --locked a13n-cyber doctor
+uv run --locked --env-file .env a13n-cyber doctor
 uv run --locked python -m unittest discover -s tests -v
 uv run --locked ruff check .
 uv run --locked ruff format --check .
 git diff --check
 ```
 
-For container changes, build the image and run `doctor` with `--network none` when Docker is available. Verify documentation commands against the actual CLI. Report checks that could not run; do not claim untested model or platform compatibility.
+For offline diagnostics, explicitly supply the three required model variables; test-only values are sufficient because `doctor` performs no network requests. For container changes, build the image and run `doctor` with `--network none` and explicit configuration when Docker is available. Verify documentation commands against the actual CLI. Report checks that could not run; do not claim untested model or platform compatibility.

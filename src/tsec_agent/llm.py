@@ -12,15 +12,15 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 def smoke(config: Config):
     """One bounded, benign API request; never executed by offline checks."""
-    if not config.api_key:
-        raise ValueError("Set STEPFUN_API_KEY or LLM_API_KEY before llm-smoke")
+    config.require_model()
     payload = {
         "model": config.model,
         "messages": [{"role": "user", "content": "Reply with OK only."}],
         "max_tokens": config.max_output_tokens,
-        "reasoning_effort": config.reasoning_effort,
         "stream": False,
     }
+    if config.reasoning_effort is not None:
+        payload["reasoning_effort"] = config.reasoning_effort
     request = urllib.request.Request(
         config.base_url + "/chat/completions",
         data=json.dumps(payload).encode("utf-8"),

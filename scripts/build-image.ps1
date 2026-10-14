@@ -9,7 +9,7 @@ Push-Location -LiteralPath $repoPath
 try {
     docker build --platform linux/amd64 --build-arg "PYTHON_BASE_IMAGE=$PythonBaseImage" -t $Image .
     if ($LASTEXITCODE -ne 0) { throw 'Docker build failed' }
-    docker run --rm --network none $Image doctor
+    docker run --rm --network none -e LLM_BASE_URL=http://127.0.0.1:9/v1 -e LLM_MODEL=offline-check -e LLM_API_KEY=offline-check $Image doctor
     if ($LASTEXITCODE -ne 0) { throw 'Offline image self-check failed' }
     if ($Export) {
         New-Item -ItemType Directory -Force dist | Out-Null

@@ -36,7 +36,8 @@ async def execute(args, config: Config) -> dict:
         else AgentConfiguration()
     )
     settings = dict(spec.model_settings or {})
-    settings["openai_reasoning_effort"] = config.reasoning_effort
+    if config.reasoning_effort is not None:
+        settings["openai_reasoning_effort"] = config.reasoning_effort
     spec = spec.with_updates(model_settings=settings)
     budget = Budget(args.request_limit, args.token_limit)
     project = Path(args.workspace).resolve()
