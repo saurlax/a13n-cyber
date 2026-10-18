@@ -1,58 +1,32 @@
-import json
-import urllib.error
-import urllib.request
+"""Explicit model connectivity check using the runtime's OpenAI SDK."""
+
+from openai import AsyncOpenAI, DefaultAsyncHttpx2Client, omit
 
 from .config import Config
 
 
-class NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
-
-
-def smoke(config: Config):
+async def smoke(config: Config):
     """One bounded, benign API request; never executed by offline checks."""
     config.require_model()
-    payload = {
-        "model": config.model,
-        "messages": [{"role": "user", "content": "Reply with OK only."}],
-        "max_tokens": config.max_output_tokens,
-        "stream": False,
-    }
-    if config.reasoning_effort is not None:
-        payload["reasoning_effort"] = config.reasoning_effort
-    request = urllib.request.Request(
-        config.base_url + "/chat/completions",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": "Bearer " + config.api_key,
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.build_opener(NoRedirect()).open(
-            request, timeout=config.timeout
-        ) as response:
-            result = json.load(response)
-    except urllib.error.HTTPError as exc:
-        # API error bodies can echo request details. Keep them out of logs.
-        raise RuntimeError(f"Model request failed with HTTP {exc.code}") from None
-    except (urllib.error.URLError, TimeoutError):
-        raise RuntimeError(
-            "Model request failed: connection or timeout error"
-        ) from None
-    choices = result.get("choices", []) if isinstance(result, dict) else []
-    if (
-        not choices
-        or not isinstance(choices[0], dict)
-        or not isinstance(choices[0].get("message"), dict)
-    ):
+    async with AsyncOpenAI(
+        base_url=config.base_url,
+        api_key=config.api_key,
+        timeout=config.timeout,
+        max_retries=0,
+        http_client=DefaultAsyncHttpx2Client(follow_redirects=False),
+    ) as client:
+        result = await client.chat.completions.create(
+            model=config.model,
+            messages=[{"role": "user", "content": "Reply with OK only."}],
+            max_tokens=config.max_output_tokens,
+            reasoning_effort=config.reasoning_effort or omit,
+            stream=False,
+        )
+    if not result.choices:
         raise RuntimeError("Model response has no valid completion")
-    # Return metadata only; no prompts, credentials, reasoning, or completion text.
-    content = choices[0]["message"].get("content")
+    # Return metadata only; the CLI reports SDK failures without their bodies.
     return {
         "status": "ok",
-        "response_has_text": bool(content),
-        "usage": result.get("usage", {}),
+        "response_has_text": bool(result.choices[0].message.content),
+        "usage": result.usage.model_dump(exclude_none=True) if result.usage else {},
     }

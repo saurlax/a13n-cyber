@@ -2,11 +2,13 @@
 .env
 .env.*
 .venv
+**/node_modules
 __pycache__
 **/__pycache__
 *.egg-info
 runs
 dist
+build
 work
 tests
 docs

@@ -9,6 +9,8 @@ This directory defines the accepted architecture and behavior of a13n Cyber. Spe
 | [00-architecture.md](00-architecture.md) | Components, dependency direction, and execution boundaries |
 | [01-cli-and-agent.md](01-cli-and-agent.md) | CLI, model configuration, agent composition, workspaces, and limits |
 | [02-tsecbench.md](02-tsecbench.md) | Platform adapter, challenge lifecycle, tools, completion, and cleanup |
+| [03-container-toolkit.md](03-container-toolkit.md) | Container tools, packaged skills, inventory, and offline verification |
+| [04-rea.md](04-rea.md) | Optional REA MCP, upstream skills, Ghidra packaging, and offline verification |
 
 ## Specification Discipline
 

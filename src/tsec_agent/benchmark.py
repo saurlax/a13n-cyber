@@ -122,9 +122,8 @@ class BenchmarkRunner:
         workspace: Path,
         budget: Budget,
         *,
-        challenge_timeout: float = 900,
+        challenge_timeout: float = 3600,
         cleanup_timeout: float = 20,
-        max_challenges: int | None = None,
         allow_hints: bool = False,
     ):
         self.client = client
@@ -133,7 +132,6 @@ class BenchmarkRunner:
         self.budget = budget
         self.challenge_timeout = challenge_timeout
         self.cleanup_timeout = cleanup_timeout
-        self.max_challenges = max_challenges
         self.allow_hints = allow_hints
 
     async def _close(self, code: str) -> None:
@@ -196,19 +194,13 @@ class BenchmarkRunner:
 
     async def run(self) -> dict:
         outcomes = []
-        reason = "selected_pass_complete"
+        reason = "pass_complete"
         self.workspace.mkdir(parents=True, exist_ok=True)
         try:
             challenges = await self.client.list_challenges()
             for challenge in challenges:
                 if challenge.is_completed:
                     continue
-                if (
-                    self.max_challenges is not None
-                    and len(outcomes) >= self.max_challenges
-                ):
-                    reason = "challenge_limit"
-                    break
                 self.budget.limits()
                 outcomes.append(await self._attempt(challenge))
             current = await self.client.list_challenges()

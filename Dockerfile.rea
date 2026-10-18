@@ -1,0 +1,20 @@
+ARG CYBER_BASE_IMAGE=a13n-cyber:dev
+FROM node:24.15.0-bookworm-slim AS node
+FROM eclipse-temurin:21-jdk-jammy AS java
+FROM ${CYBER_BASE_IMAGE}
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+COPY --from=java /opt/java/openjdk /opt/java/openjdk
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends procps \
+    && dpkg-query -W > /usr/local/share/a13n-cyber/system-packages.tsv \
+    && rm -rf /var/lib/apt/lists/*
+COPY integrations/rea/ /opt/rea/
+RUN npm ci --prefix /opt/rea --omit=dev --ignore-scripts --no-audit --no-fund \
+    && ln -s /opt/rea/node_modules/rea-agents/scripts/rea.mjs /usr/local/bin/rea
+COPY scripts/install-ghidra.py scripts/check-rea.py /app/scripts/
+RUN python /app/scripts/install-ghidra.py /opt/rea/ghidra.json /opt/ghidra
+ENV JAVA_HOME=/opt/java/openjdk GHIDRA_INSTALL_DIR=/opt/ghidra \
+    A13N_REA_ROOT=/opt/rea/node_modules/rea-agents REA_ANALYSIS_PROVIDER=ghidra

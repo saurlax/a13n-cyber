@@ -8,7 +8,7 @@ The public integration contract is the official [TSecBench SDK and API guide](ht
 
 ## Lifecycle
 
-The runner processes incomplete challenges sequentially, in platform order, at most once per invocation. `--max-challenges` limits attempted challenges. Completed challenges are skipped. A fresh workspace subdirectory and Harness Run are created for each attempt; platform-returned identifiers never become filesystem path components.
+The runner processes incomplete challenges sequentially, in platform order, at most once per invocation. There is no challenge-count limit; scheduling covers every incomplete challenge unless a documented stop condition occurs. Completed challenges are skipped. A fresh workspace subdirectory and Harness Run are created for each attempt; platform-returned identifiers never become filesystem path components.
 
 Before dispatching start, the runner records the challenge for cleanup. It closes that challenge in `finally`, including on solver failure, timeout, cancellation, or uncertain start outcome. Cleanup has an independent bounded timeout. A cleanup failure stops further scheduling and produces a failing local exit status. The application does not blindly retry start, submit, or close mutations.
 
@@ -16,7 +16,7 @@ The runner supplies the challenge description, assigned addresses, and flag prog
 
 ## Challenge Tools
 
-- `submit_flag(flag)` submits only to the bound challenge. Duplicate submissions return an already-submitted outcome. The tool does not include the flag in its result or application logs.
+- `submit_flag(flag)` submits only to the bound challenge. Duplicate submissions return an already-submitted outcome. The tool does not include the flag in its result or default application logs. Detailed observation also omits submission arguments.
 - `get_progress()` queries authoritative progress for the bound challenge.
 - `get_hint()` exists only with explicit `--allow-hints`, because requesting hints can reduce scores.
 
@@ -24,6 +24,6 @@ The model does not receive lifecycle controls or arbitrary challenge selection. 
 
 ## Completion
 
-Local stop reasons distinguish all-completed, selected-pass-complete, challenge-limit, platform-ended, budget exhaustion, and deadline. An empty challenge set is all-completed. Scores and completion are taken from platform responses, not inferred from model text. A platform `invalid_state` response is not universally treated as task-ended: context distinguishes start capacity, hint restrictions, and task completion. Unclassified platform errors stop safely.
+Local stop reasons distinguish all-completed, pass-complete, platform-ended, budget exhaustion, and deadline. An empty challenge set is all-completed. Scores and completion are taken from platform responses, not inferred from model text. A platform `invalid_state` response is not universally treated as task-ended: context distinguishes start capacity, hint restrictions, and task completion. Unclassified platform errors stop safely.
 
-After all selected work, the runner releases SDK resources and exits. It does not assume that all flags submitted or container exit immediately finalizes the platform task. Platform deployments explicitly select the `tsecbench` command; the general-purpose image does not select an evaluation platform by default.
+After the full challenge pass, the runner releases SDK resources and exits. It does not assume that all flags submitted or container exit immediately finalizes the platform task. Platform deployments explicitly select the `tsecbench` command; the general-purpose image does not select an evaluation platform by default.

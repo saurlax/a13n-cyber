@@ -20,6 +20,20 @@ class CliTests(unittest.TestCase):
             parser().parse_args(["run", "task", "--request-limit", "0"])
         self.assertEqual(exc.exception.code, 2)
 
+    def test_challenge_count_limit_is_rejected(self):
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as exc:
+            parser().parse_args(["tsecbench", "--max-challenges", "1"])
+        self.assertEqual(exc.exception.code, 2)
+
+    def test_execution_defaults_allow_full_evaluation(self):
+        for command in (["run", "task"], ["tsecbench"]):
+            with self.subTest(command=command):
+                args = parser().parse_args(command)
+                self.assertEqual(args.request_limit, 10_000)
+                self.assertEqual(args.token_limit, 100_000_000)
+                self.assertEqual(args.timeout, 21_600)
+        self.assertEqual(parser().parse_args(["tsecbench"]).challenge_timeout, 3600)
+
     def test_empty_task_is_argument_error(self):
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as exc:
             main(["run", " "])

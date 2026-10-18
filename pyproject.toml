@@ -18,8 +18,16 @@ dependencies = [
 a13n-cyber = "tsec_agent.cli:main"
 tsec-agent = "tsec_agent.cli:main"
 
+[project.optional-dependencies]
+toolkit = [
+    "pwntools==4.15.0",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+tsec_agent = ["assets/*.json", "assets/skills/*/SKILL.md"]
 
 [tool.ruff]
 target-version = "py313"

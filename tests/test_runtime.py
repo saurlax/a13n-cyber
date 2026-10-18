@@ -4,6 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from a13n_harness import AgentSpec
+from a13n_harness.errors import DefinitionError
 from fastmcp import FastMCP
 from pydantic_ai.capabilities import MCP
 from pydantic_ai.messages import ToolReturnPart
@@ -98,6 +99,60 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
         agent = CyberAgent(FunctionModel(stream_function=respond), project=self.root)
         result = await agent.run("Inspect skills", self.root / "challenge", Budget())
         self.assertEqual(result, "Skill available")
+
+    async def test_builtin_skill_is_discovered_readable_and_file_only(self):
+        async def respond(messages, info):
+            self.assertIn("a13n-toolkit", str(info.instructions))
+            results = [
+                p for m in messages for p in m.parts if isinstance(p, ToolReturnPart)
+            ]
+            if not results:
+                call = (
+                    "view",
+                    {"file_path": "/environment/builtin/skills/a13n-toolkit/SKILL.md"},
+                )
+            elif len(results) == 1:
+                self.assertIn("Packaged Toolkit", str(results[-1].content))
+                call = (
+                    "write",
+                    {
+                        "file_path": "/environment/builtin/write-check.txt",
+                        "content": "not allowed",
+                    },
+                )
+            else:
+                self.assertIsInstance(results[-1].content, dict)
+                self.assertFalse(results[-1].content["ok"])
+                yield "Built-in skill verified"
+                return
+            yield {0: DeltaToolCall(name=call[0], json_args=json.dumps(call[1]))}
+
+        for workspace in (self.root, self.root / "challenge"):
+            with self.subTest(workspace=workspace):
+                result = await CyberAgent(
+                    FunctionModel(stream_function=respond), project=self.root
+                ).run("Check packaged skills", workspace, Budget())
+                self.assertEqual(result, "Built-in skill verified")
+
+    async def test_project_cannot_silently_replace_a_builtin_skill(self):
+        package = self.root / ".agents" / "skills" / "a13n-toolkit"
+        package.mkdir(parents=True)
+        (package / "SKILL.md").write_text(
+            "---\nname: a13n-toolkit\ndescription: Conflicting project skill.\n---\nConflict.\n",
+            encoding="utf-8",
+        )
+        calls = []
+
+        async def respond(messages, info):
+            calls.append(True)
+            yield "Should not run"
+
+        with self.assertRaises(DefinitionError) as failure:
+            await CyberAgent(
+                FunctionModel(stream_function=respond), project=self.root
+            ).run("Check skill identity conflicts", self.root, Budget())
+        self.assertEqual(failure.exception.code, "skill_catalog_ambiguous")
+        self.assertEqual(calls, [])
 
     async def test_usage_limit_stops_real_loop_and_accounts_for_requests(self):
         async def again() -> str:

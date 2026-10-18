@@ -3,11 +3,13 @@
 !.env.example
 !.env.hosted.example
 .venv/
+node_modules/
 __pycache__/
 *.py[cod]
 *.egg-info/
 runs/
 dist/
+build/
 work/
 *.tar
 *.tar.gz

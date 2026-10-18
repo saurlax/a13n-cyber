@@ -13,6 +13,46 @@ MODEL_ENV = {
 
 
 class ConfigTests(unittest.TestCase):
+    def test_rea_is_enabled_only_by_an_explicit_package_directory(self):
+        for value, expected in (
+            ("", None),
+            ("   ", None),
+            ("/opt/rea/package", "/opt/rea/package"),
+        ):
+            with self.subTest(value=value):
+                with patch.dict(
+                    os.environ, {**MODEL_ENV, "A13N_REA_ROOT": value}, clear=True
+                ):
+                    config = Config.from_env()
+                self.assertEqual(config.rea_root, expected)
+                self.assertEqual(
+                    config.public_summary()["rea_enabled"], expected is not None
+                )
+
+    def test_explicit_limits_are_not_capped_by_the_application(self):
+        with patch.dict(
+            os.environ,
+            {
+                **MODEL_ENV,
+                "LLM_REQUEST_TIMEOUT": "1200",
+                "LLM_MAX_OUTPUT_TOKENS": "100000",
+            },
+            clear=True,
+        ):
+            config = Config.from_env()
+        self.assertEqual(config.timeout, 1200)
+        self.assertEqual(config.max_output_tokens, 100000)
+
+    def test_nonpositive_limits_are_rejected(self):
+        for variable in ("LLM_REQUEST_TIMEOUT", "LLM_MAX_OUTPUT_TOKENS"):
+            for value in ("0", "-1"):
+                with self.subTest(variable=variable, value=value):
+                    with patch.dict(
+                        os.environ, {**MODEL_ENV, variable: value}, clear=True
+                    ):
+                        with self.assertRaisesRegex(ConfigurationError, variable):
+                            Config.from_env()
+
     def test_secrets_not_in_repr_or_summary(self):
         with patch.dict(
             os.environ, {**MODEL_ENV, "BENCHMARK_TOKEN": "secret-bench-key"}, clear=True

@@ -15,6 +15,8 @@ a13n Cyber is a general-purpose autonomous security agent built on a13n Harness.
 
 Use Python 3.13 or later and uv. Use `uv sync --locked` to install the project and `uv run --locked` to execute commands. Manage dependencies through `uv add`, `uv remove`, and `uv lock`; commit dependency declarations and the lockfile together. Do not introduce pip installation instructions or require `PYTHONPATH` overrides.
 
+Write repository automation scripts in Python, preferably with the standard library, and run them with `uv run --locked python`. Keep scripts portable across supported host platforms; do not add PowerShell, Bash, or batch script variants. Use `pathlib` for paths and argument lists with `subprocess` for external commands. Platform-specific behavior belongs only where the execution environment requires it.
+
 Use Context7 for current library, SDK, API, and CLI documentation. If the relevant project is unavailable, consult its official documentation and source. Check APIs against the selected dependency version: a13n's website follows `main` and may differ from published packages.
 
 ## Engineering Boundaries
@@ -24,6 +26,7 @@ Before every implementation change, assess whether it introduces or changes a pu
 Follow `spec/README.md` for specification ownership and management. Specifications describe accepted design in present-tense, testable language; they do not hold proposals, progress logs, or implementation checklists. Routine work does not require creating a GitHub Issue or PR, and this policy does not authorize external writes.
 
 - Reuse Harness execution, tools, state, and capability interfaces rather than implementing a second model/tool loop.
+- Prefer existing SDK interfaces and direct functions over custom frameworks or speculative abstractions. Validate external input at its owning boundary; avoid repeated validation and fallback paths without a concrete contract or failure case.
 - Require explicit `LLM_BASE_URL`, `LLM_MODEL`, and `LLM_API_KEY`. Do not introduce model/provider defaults or vendor-specific credential fallbacks. Keep repository and package descriptions focused on the general-purpose agent.
 - Keep platform adapters, agent composition, model configuration, and outer scheduling separate. Platform lifecycle and success verification belong to application code.
 - Keep stable agent definitions separate from current Run bindings and portable continuation state. Do not serialize credentials, live clients, or environment handles into state or metadata.

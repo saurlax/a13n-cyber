@@ -8,7 +8,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from a13n_harness import AgentSpec, HarnessBuilder, HarnessRunResultEvent, RunBindings
-from a13n_harness.capabilities import FileSkillSource, SkillManager, SkillsCapability
+from a13n_harness.capabilities import (
+    FileSkillSource,
+    SkillManager,
+    SkillsCapability,
+    SkillsPolicy,
+)
 from a13n_harness.environment import (
     FILE_READ_ACTIONS,
     DynamicEnvironmentCapability,
@@ -21,6 +26,8 @@ from a13n_harness.providers.environment.direct_local.provider import DIRECT_LOCA
 from pydantic_ai.capabilities import Capability
 from pydantic_ai.models import Model
 from pydantic_ai.usage import UsageLimits
+
+BUILTIN_ASSETS = Path(__file__).resolve().parent / "assets"
 
 
 class AgentExecutionError(RuntimeError):
@@ -39,8 +46,8 @@ class AgentConfiguration(AgentSpec):
 
 @dataclass
 class Budget:
-    request_limit: int = 100
-    token_limit: int = 200_000
+    request_limit: int = 10_000
+    token_limit: int = 100_000_000
     requests: int = 0
     tokens: int = 0
 
@@ -112,6 +119,8 @@ def local_source(path: Path, name: str, *, shell: bool = True) -> PreparedSource
                 "LANG",
                 "LC_ALL",
                 "VIRTUAL_ENV",
+                "TERM",
+                "PWNLIB_NOTERM",
             ],
         )
     return PreparedSource(
@@ -136,11 +145,19 @@ class CyberAgent:
         project: Path,
         spec: AgentSpec | None = None,
         capabilities: tuple = (),
+        observer=None,
+        rea_root: str | Path | None = None,
     ):
         self.model = model
         self.project = project.resolve()
         self.spec = spec or AgentSpec()
         self.capabilities = capabilities
+        self.observer = observer
+        self.rea_root = Path(rea_root).resolve() if rea_root else None
+        if self.rea_root is not None:
+            from .rea import validate_installation
+
+            validate_installation(self.rea_root)
         if self.spec.model is not None:
             raise ValueError("Agent spec must not select a model; use LLM_MODEL")
 
@@ -153,7 +170,15 @@ class CyberAgent:
     ) -> str:
         limits = budget.limits()
         workspace.mkdir(parents=True, exist_ok=True)
-        environments = {"workspace": local_source(workspace, "env-workspace")}
+        environments = {
+            "workspace": local_source(workspace, "env-workspace"),
+            "builtin": EnvironmentMount(
+                local_source(BUILTIN_ASSETS, "env-builtin", shell=False),
+                permission_ceiling=EnvironmentPermissionSet(
+                    operations=FILE_READ_ACTIONS
+                ),
+            ),
+        }
         skill_root = "/workspace/.agents/skills"
         if workspace.resolve() != self.project:
             environments["project"] = EnvironmentMount(
@@ -163,19 +188,46 @@ class CyberAgent:
                 ),
             )
             skill_root = "/environment/project/.agents/skills"
+        skill_sources = [
+            FileSkillSource("builtin", ("/environment/builtin/skills",), required=True),
+            FileSkillSource("project", (skill_root,), required=False),
+        ]
+        rea_capabilities = []
+        if self.rea_root is not None:
+            from .rea import capability
+
+            environments["rea"] = EnvironmentMount(
+                local_source(self.rea_root, "env-rea", shell=False),
+                permission_ceiling=EnvironmentPermissionSet(
+                    operations=FILE_READ_ACTIONS
+                ),
+            )
+            skill_sources.append(
+                FileSkillSource("rea", ("/environment/rea/skills",), required=True)
+            )
+            rea_capabilities.append(capability(self.rea_root, workspace))
         capabilities = [
             DynamicEnvironmentCapability(DynamicEnvironmentConfiguration()),
             SkillsCapability(
                 SkillManager(
-                    (FileSkillSource("project", (skill_root,), required=False),)
+                    tuple(skill_sources),
+                    policy=SkillsPolicy(conflict="error"),
                 )
             ),
         ]
         if tools:
             capabilities.append(Capability(id="tsecbench", tools=list(tools)))
         capabilities.extend(self.capabilities)
+        capabilities.extend(rea_capabilities)
         instructions = self.spec.system_prompt
         blocks = [BASE_INSTRUCTIONS]
+        if self.rea_root is not None:
+            blocks.append(
+                "REA is installed and managed by this application. Load the deferred "
+                "capability with id 'rea' when its tools are needed. Do not run REA "
+                "setup or update. REA tools require absolute execution-environment "
+                "paths; Harness virtual mount paths are only for Harness file tools."
+            )
         if isinstance(instructions, str):
             blocks.append(instructions)
         elif instructions:
@@ -195,6 +247,8 @@ class CyberAgent:
         ) as stream:
             try:
                 async for item in stream:
+                    if self.observer is not None:
+                        self.observer.observe(item, stream.usage)
                     if isinstance(item, HarnessRunResultEvent):
                         result = item.result
             finally:

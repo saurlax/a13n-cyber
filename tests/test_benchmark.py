@@ -105,7 +105,7 @@ class BenchmarkTests(unittest.IsolatedAsyncioTestCase):
 
         result = await self.runner(FakeClient(), FakeAgent(claim)).run()
         self.assertEqual(result["completed_challenges"], 0)
-        self.assertEqual(result["stop_reason"], "selected_pass_complete")
+        self.assertEqual(result["stop_reason"], "pass_complete")
 
     async def test_solver_failure_cleans_up_and_continues(self):
         async def fail(tools):
@@ -167,11 +167,25 @@ class BenchmarkTests(unittest.IsolatedAsyncioTestCase):
             await runner.run()
         self.assertNotIn(("start", "two"), client.events)
 
-    async def test_challenge_limit(self):
-        client = FakeClient([challenge("one"), challenge("two")])
-        result = await self.runner(client, max_challenges=1).run()
-        self.assertEqual(result["stop_reason"], "challenge_limit")
-        self.assertEqual(len(result["outcomes"]), 1)
+    async def test_full_pass_attempts_every_incomplete_challenge(self):
+        async def incomplete(tools):
+            return "No verified result"
+
+        client = FakeClient(
+            [
+                challenge("one"),
+                challenge("done", True),
+                challenge("two"),
+                challenge("three"),
+            ]
+        )
+        result = await self.runner(client, FakeAgent(incomplete)).run()
+        self.assertEqual(result["stop_reason"], "pass_complete")
+        self.assertEqual(
+            [event for event in client.events if event[0] == "start"],
+            [("start", "one"), ("start", "two"), ("start", "three")],
+        )
+        self.assertEqual(len(result["outcomes"]), 3)
 
     async def test_hint_is_not_exposed_by_default_and_duplicate_is_safe(self):
         tools = ChallengeTools(FakeClient(), "first")

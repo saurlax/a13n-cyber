@@ -17,6 +17,7 @@ class Config:
     reasoning_effort: str | None = None
     max_output_tokens: int = 512
     timeout: int = 60
+    rea_root: str | None = None
 
     @classmethod
     def from_env(cls):
@@ -29,6 +30,7 @@ class Config:
             reasoning_effort=os.getenv("LLM_REASONING_EFFORT", "").strip() or None,
             max_output_tokens=int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "512")),
             timeout=int(os.getenv("LLM_REQUEST_TIMEOUT", "60")),
+            rea_root=os.getenv("A13N_REA_ROOT", "").strip() or None,
         )
         result.validate()
         return result
@@ -50,10 +52,10 @@ class Config:
             raise ConfigurationError(
                 "LLM_REASONING_EFFORT must be low, medium, or high"
             )
-        if not 1 <= self.max_output_tokens <= 65536:
-            raise ValueError("LLM_MAX_OUTPUT_TOKENS must be between 1 and 65536")
-        if not 1 <= self.timeout <= 600:
-            raise ValueError("LLM_REQUEST_TIMEOUT must be between 1 and 600")
+        if self.max_output_tokens <= 0:
+            raise ConfigurationError("LLM_MAX_OUTPUT_TOKENS must be positive")
+        if self.timeout <= 0:
+            raise ConfigurationError("LLM_REQUEST_TIMEOUT must be positive")
 
     def public_summary(self):
         return {
@@ -65,6 +67,7 @@ class Config:
             "reasoning_effort": self.reasoning_effort,
             "max_output_tokens": self.max_output_tokens,
             "request_timeout_seconds": self.timeout,
+            "rea_enabled": self.rea_root is not None,
         }
 
     def require_model(self):

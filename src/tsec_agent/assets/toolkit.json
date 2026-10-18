@@ -1,0 +1,14 @@
+{
+  "profile": "basic-linux",
+  "scope": "Tools preinstalled in the basic container; verify availability on other hosts.",
+  "commands": {
+    "shell": ["bash", "timeout"],
+    "files": ["git", "rg", "jq", "file", "tar", "unzip", "zip", "xxd"],
+    "network": ["curl", "openssl", "nc", "nmap", "ffuf"],
+    "binary": ["readelf", "objdump", "strings", "nm", "gdb", "gcc", "make"],
+    "python": ["python", "uv", "pwn"]
+  },
+  "python_modules": ["pwnlib", "requests", "cryptography"],
+  "python_extra": "toolkit",
+  "system_package_manifest": "/usr/local/share/a13n-cyber/system-packages.tsv"
+}

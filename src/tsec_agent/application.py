@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import signal
 from contextlib import aclosing
 from pathlib import Path
@@ -15,9 +14,8 @@ from tsec_benchmark import TSecBenchmarkAsync
 
 from .benchmark import BenchmarkRunner
 from .config import Config
+from .observation import EventTrace
 from .runtime import AgentConfiguration, Budget, CyberAgent
-
-logger = logging.getLogger(__name__)
 
 
 class Interrupted(RuntimeError):
@@ -42,38 +40,48 @@ async def execute(args, config: Config) -> dict:
     budget = Budget(args.request_limit, args.token_limit)
     project = Path(args.workspace).resolve()
     project.mkdir(parents=True, exist_ok=True)
-    async with AsyncOpenAI(
-        base_url=config.base_url,
-        api_key=config.api_key,
-        timeout=config.timeout,
-        max_retries=0,
-    ) as client:
-        model = OpenAIChatModel(
-            config.model, provider=OpenAIProvider(openai_client=client)
-        )
-        agent = CyberAgent(model, project=project, spec=spec)
-        if args.command == "run":
-            output = await agent.run(args.prompt, project, budget)
-            return {"mode": "run", "output": output, "usage": budget.summary()}
-        # The SDK's __aenter__ probes before ownership is transferred; aclosing
-        # also closes its HTTP client when that probe fails or is cancelled.
-        benchmark = TSecBenchmarkAsync(
-            base_url=config.benchmark_url,
-            token=config.benchmark_token,
+    with EventTrace(
+        args.log_dir,
+        console=args.verbose,
+        secrets=(config.api_key, config.benchmark_token),
+    ) as trace:
+        async with AsyncOpenAI(
+            base_url=config.base_url,
+            api_key=config.api_key,
             timeout=config.timeout,
-        )
-        async with aclosing(benchmark):
-            await benchmark.check_vpn()
-            runner = BenchmarkRunner(
-                benchmark,
-                agent,
-                project,
-                budget,
-                challenge_timeout=args.challenge_timeout,
-                max_challenges=args.max_challenges,
-                allow_hints=args.allow_hints,
+            max_retries=0,
+        ) as client:
+            model = OpenAIChatModel(
+                config.model, provider=OpenAIProvider(openai_client=client)
             )
-            return await runner.run()
+            agent = CyberAgent(
+                model,
+                project=project,
+                spec=spec,
+                observer=trace,
+                rea_root=config.rea_root,
+            )
+            if args.command == "run":
+                output = await agent.run(args.prompt, project, budget)
+                return {"mode": "run", "output": output, "usage": budget.summary()}
+            # The SDK's __aenter__ probes before ownership is transferred; aclosing
+            # also closes its HTTP client when that probe fails or is cancelled.
+            benchmark = TSecBenchmarkAsync(
+                base_url=config.benchmark_url,
+                token=config.benchmark_token,
+                timeout=config.timeout,
+            )
+            async with aclosing(benchmark):
+                await benchmark.check_vpn()
+                runner = BenchmarkRunner(
+                    benchmark,
+                    agent,
+                    project,
+                    budget,
+                    challenge_timeout=args.challenge_timeout,
+                    allow_hints=args.allow_hints,
+                )
+                return await runner.run()
 
 
 async def run_application(args, config: Config) -> dict:
